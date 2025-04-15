@@ -102,7 +102,6 @@ def create_user(name, email, phone, password):
 
         # Put the item into the DynamoDB table
         get_users_table().put_item(Item={
-            'id': user_id,  # Unique ID
             'name': name,
             'email': email,
             'phone': phone,
