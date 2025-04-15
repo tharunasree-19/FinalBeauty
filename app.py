@@ -97,20 +97,18 @@ def get_user_by_email(email):
 
 def create_user(name, email, phone, password):
     try:
-        # Generate unique user ID using timestamp
-        user_id = str(datetime.datetime.utcnow().timestamp()).replace('.', '')
-
-        # Put the item into the DynamoDB table
         get_users_table().put_item(Item={
+            'email': email,  # Partition Key
             'name': name,
-            'email': email,
             'phone': phone,
-            'password': generate_password_hash(password)  # Store hashed password
+            'password': generate_password_hash(password),
+            'created_at': str(datetime.datetime.utcnow())
         })
         return True
     except Exception as e:
         logger.error(f"Error creating user: {e}")
         return False
+
 
 # Authentication Routes (Blueprint)
 @auth_bp.route('/login', methods=['GET', 'POST'])
