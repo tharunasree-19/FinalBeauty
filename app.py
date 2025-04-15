@@ -194,17 +194,16 @@ def booking():
                 else:
                     appt_id = str(datetime.datetime.utcnow().timestamp()).replace('.', '')
                     appointment_item = {
-                            'appointment_id': appt_id,  # ✅ Fix this line
-                            'user_email': session['user_email'],
-                            'stylist_id': stylist_id,
-                            'service': service,
-                            'appointment_date': date_str,
-                            'appointment_time': time_str,
-                            'notes': notes,
-                            'status': 'scheduled',
-                            'created_at': str(datetime.datetime.utcnow())
-                   }
-                       
+                        'appointment_id': appt_id,  # ✅ Fix this line
+                        'user_id': session['user_id'],
+                        'stylist_id': stylist_id,
+                        'service': service,
+                        'appointment_date': date_str,
+                        'appointment_time': time_str,
+                        'notes': notes,
+                        'status': 'scheduled',
+                        'created_at': str(datetime.datetime.utcnow())
+                    }
                     get_appointments_table().put_item(Item=appointment_item)
                     message = f"Appointment booked for {session['user_name']} with stylist ID {stylist_id} on {date_str} at {time_str}."
                     send_sns_notification(message)
