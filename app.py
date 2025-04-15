@@ -197,9 +197,12 @@ def booking():
                         error = "This time slot is already booked"
                         break
                 else:
+                    # Generate a unique appointment ID
                     appt_id = str(datetime.datetime.utcnow().timestamp()).replace('.', '')
+
+                    # Create the appointment item with the appointment_id included
                     appointment_item = {
-                        'appointment_id': appt_id,  # ✅ Fix this line
+                        'appointment_id': appt_id,  # Partition Key in your table
                         'user_id': session['user_id'],
                         'stylist_id': stylist_id,
                         'service': service,
@@ -209,10 +212,15 @@ def booking():
                         'status': 'scheduled',
                         'created_at': str(datetime.datetime.utcnow())
                     }
+
+                    # Insert the item into DynamoDB
                     get_appointments_table().put_item(Item=appointment_item)
+
+                    # Send confirmation notifications
                     message = f"Appointment booked for {session['user_name']} with stylist ID {stylist_id} on {date_str} at {time_str}."
                     send_sns_notification(message)
                     send_email("client@example.com", "Salon Appointment Confirmed", message)
+
                     success = "Your appointment has been booked successfully!"
 
         except ValueError as e:
