@@ -223,7 +223,8 @@ def appointments():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
 
-    response = get_appointments_table().scan(FilterExpression=Key('user_id').eq(session['user_id']))
+    # Instead of scanning for user_id, scan using 'user_email' or similar field
+    response = get_appointments_table().scan(FilterExpression=Key('user_email').eq(session['user_email']))
     appointments = response['Items']
 
     stylists_map = {stylist['id']: stylist['name'] for stylist in get_stylists()}
@@ -231,6 +232,7 @@ def appointments():
         appt['stylist_name'] = stylists_map.get(appt['stylist_id'], "Unknown")
 
     return render_template('appointments.html', appointments=appointments)
+
 
 @booking_bp.route('/cancel/<string:appointment_id>')
 def cancel_appointment(appointment_id):
