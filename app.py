@@ -129,11 +129,13 @@ def login():
         if user and check_password_hash(user['password'], password):
             session['user_id'] = user['id']
             session['user_name'] = user['name']
+            session['user_email'] = user['email']  # ✅ THIS LINE is important
             flash('Login successful!', 'success')
             return redirect(url_for('home'))
         else:
             error = "Invalid email or password"
     return render_template('login.html', error=error)
+
 
 @auth_bp.route('/signup', methods=['GET', 'POST'])
 def signup():
@@ -166,7 +168,8 @@ def logout():
     flash("Logged out.", "info")
     return redirect(url_for('auth.login'))
 
-# Booking Routes (Blueprint)@booking_bp.route('/', methods=['GET', 'POST'])
+# Booking Routes (Blueprint)# Booking Route (Blueprint)
+@booking_bp.route('/', methods=['GET', 'POST'])
 def booking():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
@@ -191,47 +194,62 @@ def booking():
                 error = "Appointment date cannot be in the past"
             else:
                 # Check if the time slot is available for the stylist
-                response = get_appointments_table().scan(FilterExpression=Key('stylist_id').eq(stylist_id))
+                response = get_appointments_table().scan(
+                    FilterExpression=Key('stylist_id').eq(stylist_id)
+                )
                 for appt in response['Items']:
                     if appt['appointment_date'] == date_str and appt['appointment_time'] == time_str and appt['status'] == 'scheduled':
                         error = "This time slot is already booked"
                         break
                 else:
                     # Generate a unique appointment_id using current timestamp
-                    appt_id = str(datetime.datetime.utcnow().timestamp()).replace('.', '')  # Unique ID for appointment
-                    
-                    user_email = session.get('user_email')  # Assuming the user_email is stored in the session
+                    appt_id = 'apt' + datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S%f')[:-3]  # More readable and unique
+                    user_email = session.get('user_email')
 
-                    # Create the appointment item for DynamoDB
-                    appointment_item = {
-                        'appointment_id': appt_id,  # Partition Key
-                        'user_email': user_email,   # Sort Key (email)
-                        'user_id': session['user_id'],  # User ID from session
-                        'stylist_id': stylist_id,   # Stylist ID from form
-                        'service': service,         # Service selected (e.g., "Haircut")
-                        'appointment_date': date_str,  # Date of appointment
-                        'appointment_time': time_str,  # Time of appointment
-                        'notes': notes,             # Notes from the user
-                        'status': 'scheduled',      # Default status when booked
-                        'created_at': str(datetime.datetime.utcnow())  # Timestamp of when the appointment was created
-                    }
+                    if not user_email:
+                        error = "User email not found in session. Please log in again."
+                    else:
+                        # Create the appointment item for DynamoDB
+                        appointment_item = {
+                            'appointment_id': appt_id,  # Partition Key
+                            'user_email': user_email,   # Sort Key
+                            'user_id': session['user_id'],
+                            'stylist_id': stylist_id,
+                            'service': service,
+                            'appointment_date': date_str,
+                            'appointment_time': time_str,
+                            'notes': notes,
+                            'status': 'scheduled',
+                            'created_at': str(datetime.datetime.utcnow())
+                        }
 
-                    # Put item in DynamoDB
-                    get_appointments_table().put_item(Item=appointment_item)
+                        # Debug print
+                        print("DEBUG - Booking Item:", appointment_item)
 
-                    # Send notifications (SNS and email)
-                    message = f"Appointment booked for {session['user_name']} with stylist ID {stylist_id} on {date_str} at {time_str}."
-                    send_sns_notification(message)
-                    send_email("client@example.com", "Salon Appointment Confirmed", message)
+                        # Save to DynamoDB
+                        get_appointments_table().put_item(Item=appointment_item)
 
-                    success = "Your appointment has been booked successfully!"
+                        # Send notifications
+                        message = f"Appointment booked for {session['user_name']} with stylist ID {stylist_id} on {date_str} at {time_str}."
+                        send_sns_notification(message)
+                        send_email("client@example.com", "Salon Appointment Confirmed", message)
+
+                        success = "Your appointment has been booked successfully!"
 
         except ValueError as e:
             error = f"Invalid date or time format: {e}"
         except Exception as e:
+            print("ERROR:", str(e))  # Extra log for deeper error trace
             error = f"Error booking appointment: {e}"
 
-    return render_template('booking.html', error=error, success=success, stylists=stylists, min_date=datetime.date.today().strftime('%Y-%m-%d'))
+    return render_template(
+        'booking.html',
+        error=error,
+        success=success,
+        stylists=stylists,
+        min_date=datetime.date.today().strftime('%Y-%m-%d')
+    )
+
 
 
 @booking_bp.route('/appointments')
