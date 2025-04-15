@@ -204,16 +204,15 @@ def booking():
 
                     # Create the appointment item for DynamoDB
                     appointment_item = {
-                        'appointment_id': appt_id,  # Partition Key
-                        'user_email': user_email,   # Sort Key (email)
-                        'user_id': session['user_id'],  # User ID from session
-                        'stylist_id': stylist_id,   # Stylist ID from form
-                        'service': service,         # Service selected (e.g., "Haircut")
-                        'appointment_date': date_str,  # Date of appointment
-                        'appointment_time': time_str,  # Time of appointment
-                        'notes': notes,             # Notes from the user
-                        'status': 'scheduled',      # Default status when booked
-                        'created_at': str(datetime.datetime.utcnow())  # Timestamp of when the appointment was created
+                         'appointment_id': appt_id,
+                         'user_email': session['user_email'],
+                         'stylist_id': stylist_id,
+                         'service': service,
+                         'appointment_date': date_str,
+                         'appointment_time': time_str,
+                         'notes': notes,
+                         'status': 'scheduled',
+                         'created_at': str(datetime.datetime.utcnow())
                     }
 
                     # Put item in DynamoDB
