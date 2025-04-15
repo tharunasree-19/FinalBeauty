@@ -85,18 +85,28 @@ def get_stylists():
     except Exception as e:
         logger.error(f"Error fetching stylists: {e}")
         return []
-
+        
 def get_user_by_email(email):
-    try:
-        response = get_users_table().get_item(Key={'email': email})
-        return response.get('Item')
-    except Exception as e:
-        logger.error(f"Error fetching user by email: {e}")
-        return None
+    # Ensure you use the correct table name, 'SalonUsers'
+    table = get_dynamodb().Table('SalonUsers')  # Changed to match your actual table name
+    response = table.query(
+        KeyConditionExpression=Key('email').eq(email)
+    )
+    
+    # Return the first matching user or None if no user is found
+    return response['Items'][0] if response['Items'] else None
+
+
 
 
 def create_user(name, email, phone, password):
     try:
+        # Check if email already exists before attempting to insert
+        if get_user_by_email(email):
+            print("Email already exists:", email)
+            return False  # Email already exists, return False
+        
+        # Proceed to insert user data into the 'SalonUsers' table
         response = get_users_table().put_item(Item={
             'email': email,  # Partition Key
             'name': name,
@@ -105,14 +115,20 @@ def create_user(name, email, phone, password):
             'created_at': str(datetime.datetime.utcnow())
         })
         
-        # Log the response to check what DynamoDB returns
-        print("PutItem response:", response)  # Added for debugging
-        
-        return True
+        # Log the response to see if DynamoDB operation was successful
+        print("PutItem response:", response)
+
+        # Check if the insert was successful (status code 200)
+        if response.get('ResponseMetadata', {}).get('HTTPStatusCode') == 200:
+            return True  # User creation successful
+        else:
+            print("Failed to create user, DynamoDB response:", response)
+            return False  # DynamoDB didn't respond with success
     except Exception as e:
-        print("Error creating user:", e)  # Added for debugging
+        print("Error creating user:", e)  # Log any error during user creation
         logger.error(f"Error creating user: {e}")
-        return False
+        return False  # Return False if there’s an exception
+
 
 
 
@@ -152,15 +168,26 @@ def signup():
         elif len(password) < 6:
             error = "Password must be at least 6 characters"
         else:
-            # Check if the email already exists in DynamoDB
-            if get_user_by_email(email):
-                error = "Email already exists"
-            elif create_user(name, email, phone, password):
-                flash('Account created! Please login.', 'success')
-                return redirect(url_for('auth.login'))
-            else:
-                error = "Failed to create account"
+            try:
+                # Check if the email already exists in DynamoDB
+                existing_user = get_user_by_email(email)
+                if existing_user:
+                    error = "Email already exists"
+                else:
+                    # Attempt to create the user
+                    user_creation = create_user(name, email, phone, password)
+                    
+                    if user_creation:
+                        flash('Account created! Please login.', 'success')
+                        return redirect(url_for('auth.login'))
+                    else:
+                        error = "Failed to create account in database"
+            except Exception as e:
+                print("SIGNUP ERROR:", str(e))  # Debugging message
+                error = f"Error occurred while creating account: {e}"
+
     return render_template('signup.html', error=error)
+
 
 @auth_bp.route('/logout')
 def logout():
