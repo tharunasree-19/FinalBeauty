@@ -166,8 +166,7 @@ def logout():
     flash("Logged out.", "info")
     return redirect(url_for('auth.login'))
 
-# Booking Routes (Blueprint)
-@booking_bp.route('/', methods=['GET', 'POST'])
+# Booking Routes (Blueprint)@booking_bp.route('/', methods=['GET', 'POST'])
 def booking():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
@@ -183,6 +182,7 @@ def booking():
         notes = request.form['notes']
 
         try:
+            # Convert date and time from form data
             appointment_date = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
             appointment_time = datetime.datetime.strptime(time_str, '%H:%M').time()
             today = datetime.date.today()
@@ -190,33 +190,36 @@ def booking():
             if appointment_date < today:
                 error = "Appointment date cannot be in the past"
             else:
-                # Check slot availability
+                # Check if the time slot is available for the stylist
                 response = get_appointments_table().scan(FilterExpression=Key('stylist_id').eq(stylist_id))
                 for appt in response['Items']:
                     if appt['appointment_date'] == date_str and appt['appointment_time'] == time_str and appt['status'] == 'scheduled':
                         error = "This time slot is already booked"
                         break
                 else:
-                    # Generate a unique appointment ID
-                    appt_id = str(datetime.datetime.utcnow().timestamp()).replace('.', '')
+                    # Generate a unique appointment_id using current timestamp
+                    appt_id = str(datetime.datetime.utcnow().timestamp()).replace('.', '')  # Unique ID for appointment
+                    
+                    user_email = session.get('user_email')  # Assuming the user_email is stored in the session
 
-                    # Create the appointment item with the appointment_id included
+                    # Create the appointment item for DynamoDB
                     appointment_item = {
-                        'appointment_id': appt_id,  # Partition Key in your table
-                        'user_id': session['user_id'],
-                        'stylist_id': stylist_id,
-                        'service': service,
-                        'appointment_date': date_str,
-                        'appointment_time': time_str,
-                        'notes': notes,
-                        'status': 'scheduled',
-                        'created_at': str(datetime.datetime.utcnow())
+                        'appointment_id': appt_id,  # Partition Key
+                        'user_email': user_email,   # Sort Key (email)
+                        'user_id': session['user_id'],  # User ID from session
+                        'stylist_id': stylist_id,   # Stylist ID from form
+                        'service': service,         # Service selected (e.g., "Haircut")
+                        'appointment_date': date_str,  # Date of appointment
+                        'appointment_time': time_str,  # Time of appointment
+                        'notes': notes,             # Notes from the user
+                        'status': 'scheduled',      # Default status when booked
+                        'created_at': str(datetime.datetime.utcnow())  # Timestamp of when the appointment was created
                     }
 
-                    # Insert the item into DynamoDB
+                    # Put item in DynamoDB
                     get_appointments_table().put_item(Item=appointment_item)
 
-                    # Send confirmation notifications
+                    # Send notifications (SNS and email)
                     message = f"Appointment booked for {session['user_name']} with stylist ID {stylist_id} on {date_str} at {time_str}."
                     send_sns_notification(message)
                     send_email("client@example.com", "Salon Appointment Confirmed", message)
@@ -229,6 +232,7 @@ def booking():
             error = f"Error booking appointment: {e}"
 
     return render_template('booking.html', error=error, success=success, stylists=stylists, min_date=datetime.date.today().strftime('%Y-%m-%d'))
+
 
 @booking_bp.route('/appointments')
 def appointments():
