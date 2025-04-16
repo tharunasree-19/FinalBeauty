@@ -1,4 +1,5 @@
 import os
+import uuid
 import datetime
 import logging
 import boto3
@@ -128,16 +129,18 @@ def login():
         user = get_user_by_email(email)
 
         if user and check_password_hash(user['password'], password):
-            # ✅ Use .get() so it doesn't crash if 'id' is missing
-            session['user_id'] = user.get('id', user.get('email'))  # fallback to email if 'id' is missing
+            # ✅ Safely fetch keys without crashing
+            session['user_id'] = user.get('id') or user.get('user_id') or user.get('email')
             session['user_name'] = user.get('name', 'User')
-            session['user_email'] = user.get('email')
+            session['user_email'] = user.get('email', email)
+
             flash('Login successful!', 'success')
             return redirect(url_for('home'))
         else:
             error = "Invalid email or password"
 
     return render_template('login.html', error=error)
+
 
 
 
@@ -182,6 +185,7 @@ def booking():
     stylists = get_stylists()
 
     if request.method == 'POST':
+        appointment_id = str(datetime.datetime.utcnow().timestamp()).replace('.', '')
         service = request.form['service']
         stylist_id = request.form['stylist']
         date_str = request.form['date']
@@ -222,6 +226,7 @@ def booking():
                         'status': 'scheduled',
                         'created_at': str(datetime.datetime.utcnow())
                     }
+                    print("📦 Appointment to Insert:", appointment_item)
 
                     # ✅ Put item in DynamoDB
                     get_appointments_table().put_item(Item=appointment_item)
