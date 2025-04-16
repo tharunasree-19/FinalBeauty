@@ -3,17 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Salon - Login</title>
+    <title>Elegance Salon - Login</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
+    <header class="auth-header">
+        <div class="logo">Elegance<span>Salon</span></div>
+    </header>
+
     <div class="container">
         <div class="form-box">
-            <h1>Salon Login</h1>
+            <h1>Welcome Back</h1>
             {% if error %}
-            <div class="error-message">{{ error }}</div>
+            <div class="error-message">
+                <i class="fas fa-exclamation-circle"></i> {{ error }}
+            </div>
             {% endif %}
-            <form action="/login" method="POST">
+            
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="{{ category }}-message">
+                            <i class="fas fa-{% if category == 'success' %}check{% else %}info{% endif %}-circle"></i> {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            <form action="{{ url_for('auth.login') }}" method="POST">
                 <div class="input-group">
                     <label for="email">Email</label>
                     <input type="email" id="email" name="email" required>
@@ -25,9 +43,13 @@
                 <button type="submit" class="btn">Login</button>
             </form>
             <div class="form-footer">
-                <p>Don't have an account? <a href="/signup">Sign Up</a></p>
+                <p>Don't have an account? <a href="{{ url_for('auth.signup') }}">Sign Up</a></p>
             </div>
         </div>
     </div>
+    
+    <footer class="auth-footer">
+        <p>&copy; 2025 Elegance Salon. All rights reserved.</p>
+    </footer>
 </body>
 </html>
