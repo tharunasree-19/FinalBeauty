@@ -166,7 +166,8 @@ def logout():
     flash("Logged out.", "info")
     return redirect(url_for('auth.login'))
 
-# Booking Routes (Blueprint)@booking_bp.route('/', methods=['GET', 'POST'])
+# Booking Routes (Blueprint)
+@booking_bp.route('/', methods=['GET', 'POST'])
 def booking():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
