@@ -1,5 +1,4 @@
 import os
-import uuid
 import datetime
 import logging
 import boto3
@@ -129,8 +128,8 @@ def login():
         user = get_user_by_email(email)
 
         if user and check_password_hash(user['password'], password):
-            # Safely get 'id' using .get(), fallback to 'email' if 'id' is missing
-            session['user_id'] = user.get('id', user.get('email'))  # Fallback to email if 'id' is missing
+            # ✅ Use .get() so it doesn't crash if 'id' is missing
+            session['user_id'] = user.get('id', user.get('email'))  # fallback to email if 'id' is missing
             session['user_name'] = user.get('name', 'User')
             session['user_email'] = user.get('email')
             flash('Login successful!', 'success')
@@ -138,8 +137,9 @@ def login():
         else:
             error = "Invalid email or password"
 
-    returnreturn redirect(url_for('auth.login'))
-    
+    return render_template('login.html', error=error)
+
+
 
 @auth_bp.route('/signup', methods=['GET', 'POST'])
 def signup():
@@ -164,7 +164,7 @@ def signup():
                 return redirect(url_for('auth.login'))
             else:
                 error = "Failed to create account"
-    return redirect(url_for('auth.signup'))
+    return render_template('signup.html', error=error)
 
 @auth_bp.route('/logout')
 def logout():
@@ -210,7 +210,6 @@ def booking():
                     user_email = session.get('user_email')  # Assuming the user_email is stored in the session
 
                     # ✅ Create the appointment item for DynamoDB
-                    appointment_id = str(datetime.datetime.utcnow().timestamp()).replace('.', '')
                     appointment_item = {
                         'appointment_id': appointment_id,   # Partition Key
                         'user_email': user_email,           # Sort Key
@@ -223,7 +222,6 @@ def booking():
                         'status': 'scheduled',
                         'created_at': str(datetime.datetime.utcnow())
                     }
-                    print("📦 Appointment to Insert:", appointment_item)
 
                     # ✅ Put item in DynamoDB
                     get_appointments_table().put_item(Item=appointment_item)
