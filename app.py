@@ -185,7 +185,6 @@ def booking():
     stylists = get_stylists()
 
     if request.method == 'POST':
-        appointment_id = str(datetime.datetime.utcnow().timestamp()).replace('.', '')
         service = request.form['service']
         stylist_id = request.form['stylist']
         date_str = request.form['date']
@@ -214,6 +213,7 @@ def booking():
                     user_email = session.get('user_email')  # Assuming the user_email is stored in the session
 
                     # ✅ Create the appointment item for DynamoDB
+                    appointment_id = str(datetime.datetime.utcnow().timestamp()).replace('.', '')
                     appointment_item = {
                         'appointment_id': appointment_id,   # Partition Key
                         'user_email': user_email,           # Sort Key
