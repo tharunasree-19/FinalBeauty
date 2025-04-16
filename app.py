@@ -1,4 +1,5 @@
 import os
+import uuid
 import datetime
 import logging
 import boto3
@@ -96,12 +97,18 @@ def get_user_by_email(email):
         return None
 
 
+import uuid
+
 def create_user(name, email, phone, password):
     try:
         table = get_users_table()
         print("Using table:", table.table_name)
 
+        # 🔑 Generate a unique user_id
+        user_id = str(uuid.uuid4())
+
         response = table.put_item(Item={
+            'user_id': user_id,  # Required if your table expects this as a partition key
             'email': email,
             'name': name,
             'phone': phone,
@@ -109,13 +116,14 @@ def create_user(name, email, phone, password):
             'created_at': str(datetime.datetime.utcnow())
         })
 
-        print("PutItem HTTPStatusCode:", response['ResponseMetadata']['HTTPStatusCode'])
+        print("✅ PutItem HTTPStatusCode:", response['ResponseMetadata']['HTTPStatusCode'])
 
         return True
     except Exception as e:
         print("❌ Error creating user:", repr(e))
         traceback.print_exc()
         return False
+
 
 
 # Authentication Routes (Blueprint)
