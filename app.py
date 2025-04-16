@@ -128,14 +128,17 @@ def login():
         user = get_user_by_email(email)
 
         if user and check_password_hash(user['password'], password):
-            session['user_id'] = user['id']
-            session['user_name'] = user['name']
-            session['user_email'] = user['email']  # ✅ Add this line
+            # ✅ Use .get() so it doesn't crash if 'id' is missing
+            session['user_id'] = user.get('id', user.get('email'))  # fallback to email if 'id' is missing
+            session['user_name'] = user.get('name', 'User')
+            session['user_email'] = user.get('email')
             flash('Login successful!', 'success')
             return redirect(url_for('home'))
         else:
             error = "Invalid email or password"
+
     return render_template('login.html', error=error)
+
 
 
 @auth_bp.route('/signup', methods=['GET', 'POST'])
