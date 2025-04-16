@@ -96,19 +96,15 @@ def get_user_by_email(email):
         logger.error(f"Error fetching user by email: {e}")
         return None
 
-
-import uuid
+import uuid  # Put at the top of your file if not already imported
 
 def create_user(name, email, phone, password):
     try:
         table = get_users_table()
-        print("Using table:", table.table_name)
-
-        # 🔑 Generate a unique user_id
-        user_id = str(uuid.uuid4())
+        user_id = str(uuid.uuid4())  # ✅ generate unique user_id
 
         response = table.put_item(Item={
-            'user_id': user_id,  # Required if your table expects this as a partition key
+            'user_id': user_id,
             'email': email,
             'name': name,
             'phone': phone,
@@ -116,14 +112,11 @@ def create_user(name, email, phone, password):
             'created_at': str(datetime.datetime.utcnow())
         })
 
-        print("✅ PutItem HTTPStatusCode:", response['ResponseMetadata']['HTTPStatusCode'])
-
         return True
     except Exception as e:
         print("❌ Error creating user:", repr(e))
         traceback.print_exc()
         return False
-
 
 
 # Authentication Routes (Blueprint)
@@ -136,8 +129,8 @@ def login():
         user = get_user_by_email(email)
 
         if user and check_password_hash(user['password'], password):
-            # ✅ Use .get() so it doesn't crash if 'id' is missing
-            session['user_id'] = user.get('id', user.get('email'))  # fallback to email if 'id' is missing
+            # ✅ Corrected key name from 'id' to 'user_id'
+            session['user_id'] = user.get('user_id', user.get('email'))  # fallback to email if user_id is missing
             session['user_name'] = user.get('name', 'User')
             session['user_email'] = user.get('email')
             flash('Login successful!', 'success')
