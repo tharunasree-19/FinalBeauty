@@ -129,14 +129,13 @@ def login():
 
         if user and check_password_hash(user['password'], password):
             # Safely extract ID
-            user_id = user.get('id') or user.get('user_id') or email  # Fallback to email if no ID
-            
-            session['user_id'] = user_id
-            session['user_name'] = user['name']
-            session['user_email'] = user['email']
+           if user and check_password_hash(user['password'], password):
+    session['user_id'] = user.get('id', email)  # fallback to email if id doesn't exist
+    session['user_name'] = user.get('name', 'User')
+    session['user_email'] = user.get('email')
+    flash('Login successful!', 'success')
+    return redirect(url_for('home'))
 
-            flash('Login successful!', 'success')
-            return redirect(url_for('home'))
         else:
             error = "Invalid email or password"
     return render_template('login.html', error=error)
