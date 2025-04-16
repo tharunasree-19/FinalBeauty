@@ -98,7 +98,8 @@ def get_user_by_email(email):
 def create_user(name, email, phone, password):
     try:
         table = get_users_table()
-        print("Using table:", table.table_name)  # Confirm which table
+        print("Using table:", table.table_name)
+
         response = table.put_item(Item={
             'email': email,
             'name': name,
@@ -106,13 +107,14 @@ def create_user(name, email, phone, password):
             'password': generate_password_hash(password),
             'created_at': str(datetime.datetime.utcnow())
         })
-        print("PutItem response:", response)
+
+        print("PutItem HTTPStatusCode:", response['ResponseMetadata']['HTTPStatusCode'])
+
         return True
     except Exception as e:
-        print("Error creating user:", repr(e))  # Use repr for full trace
-        logger.error(f"Error creating user: {repr(e)}")
+        print("❌ Error creating user:", repr(e))
+        traceback.print_exc()
         return False
-
 
 
 # Authentication Routes (Blueprint)
