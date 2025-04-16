@@ -14,7 +14,7 @@
             <ul class="nav-links">
                 <li><a href="/home"><i class="fas fa-home"></i> Home</a></li>
                 <li><a href="/booking"><i class="fas fa-calendar-plus"></i> Book Now</a></li>
-                <li><a href="/appointments" class="active"><i class="fas fa-calendar-check"></i> My Appointments</a></li>
+                <li><a href="{{ url_for('booking.appointments') }}" class="active"><i class="fas fa-calendar-check"></i> My Appointments</a></li>
                 <li><a href="/logout" class="logout-link"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
             </ul>
             <div class="hamburger-menu">
