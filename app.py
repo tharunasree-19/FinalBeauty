@@ -205,8 +205,7 @@ def booking():
                         break
                 else:
                     # ✅ Generate a unique appointment_id using current timestamp
-                    appointment_id = str(datetime.datetime.utcnow().timestamp()).replace('.', '')
-
+                    appointment_id = str(datetime.datetime.utcnow().timestamp()).replace('.', '')  # Partition Key
                     user_email = session.get('user_email')  # Assuming the user_email is stored in the session
 
                     # ✅ Create the appointment item for DynamoDB
@@ -223,8 +222,15 @@ def booking():
                         'created_at': str(datetime.datetime.utcnow())
                     }
 
+                    print("📦 Appointment to Insert:", appointment_item)  # Debugging step
+
                     # ✅ Put item in DynamoDB
-                    get_appointments_table().put_item(Item=appointment_item)
+                    try:
+                        get_appointments_table().put_item(Item=appointment_item)
+                    except Exception as e:
+                        error = f"Error inserting into DynamoDB: {e}"
+                        print("⚠️ DynamoDB Error:", e)
+                        return render_template('booking.html', error=error, success=success, stylists=stylists)
 
                     # Send notifications
                     message = f"Appointment booked for {session['user_name']} with stylist ID {stylist_id} on {date_str} at {time_str}."
@@ -245,7 +251,6 @@ def booking():
         stylists=stylists,
         min_date=datetime.date.today().strftime('%Y-%m-%d')
     )
-
 
 @booking_bp.route('/appointments')
 def appointments():
