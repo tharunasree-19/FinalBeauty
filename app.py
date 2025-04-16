@@ -198,28 +198,29 @@ def booking():
                         error = "This time slot is already booked"
                         break
                 else:
-                    # Generate a unique appointment_id using current timestamp
-                    'appointment_id': str(datetime.datetime.utcnow().timestamp()).replace('.', ''),  # Correct
+                    # ✅ Generate a unique appointment_id using current timestamp
+                    appointment_id = str(datetime.datetime.utcnow().timestamp()).replace('.', '')
+
                     user_email = session.get('user_email')  # Assuming the user_email is stored in the session
 
-                    # Create the appointment item for DynamoDB
+                    # ✅ Create the appointment item for DynamoDB
                     appointment_item = {
-                        'appointment_id': appt_id,  # Partition Key
-                        'user_email': user_email,   # Sort Key (email)
-                        'user_id': session['user_id'],  # User ID from session
-                        'stylist_id': stylist_id,   # Stylist ID from form
-                        'service': service,         # Service selected (e.g., "Haircut")
-                        'appointment_date': date_str,  # Date of appointment
-                        'appointment_time': time_str,  # Time of appointment
-                        'notes': notes,             # Notes from the user
-                        'status': 'scheduled',      # Default status when booked
-                        'created_at': str(datetime.datetime.utcnow())  # Timestamp of when the appointment was created
+                        'appointment_id': appointment_id,   # Partition Key
+                        'user_email': user_email,           # Sort Key
+                        'user_id': session['user_id'],
+                        'stylist_id': stylist_id,
+                        'service': service,
+                        'appointment_date': date_str,
+                        'appointment_time': time_str,
+                        'notes': notes,
+                        'status': 'scheduled',
+                        'created_at': str(datetime.datetime.utcnow())
                     }
 
-                    # Put item in DynamoDB
+                    # ✅ Put item in DynamoDB
                     get_appointments_table().put_item(Item=appointment_item)
 
-                    # Send notifications (SNS and email)
+                    # Send notifications
                     message = f"Appointment booked for {session['user_name']} with stylist ID {stylist_id} on {date_str} at {time_str}."
                     send_sns_notification(message)
                     send_email("client@example.com", "Salon Appointment Confirmed", message)
@@ -231,7 +232,13 @@ def booking():
         except Exception as e:
             error = f"Error booking appointment: {e}"
 
-    return render_template('booking.html', error=error, success=success, stylists=stylists, min_date=datetime.date.today().strftime('%Y-%m-%d'))
+    return render_template(
+        'booking.html',
+        error=error,
+        success=success,
+        stylists=stylists,
+        min_date=datetime.date.today().strftime('%Y-%m-%d')
+    )
 
 
 @booking_bp.route('/appointments')
