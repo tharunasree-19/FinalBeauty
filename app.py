@@ -199,8 +199,7 @@ def booking():
                         break
                 else:
                     # Generate a unique appointment_id using current timestamp
-                    appt_id = str(datetime.datetime.utcnow().timestamp()).replace('.', '')  # Unique ID for appointment
-                    
+                    'appointment_id': str(datetime.datetime.utcnow().timestamp()).replace('.', ''),  # Correct
                     user_email = session.get('user_email')  # Assuming the user_email is stored in the session
 
                     # Create the appointment item for DynamoDB
