@@ -118,7 +118,8 @@ def create_user(name, email, phone, password):
         return False
 
 
-# Authentication Routes (Blueprint)@auth_bp.route('/login', methods=['GET', 'POST'])
+# Authentication Routes (Blueprint)
+@auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     error = None
     if request.method == 'POST':
@@ -127,18 +128,14 @@ def login():
         user = get_user_by_email(email)
 
         if user and check_password_hash(user['password'], password):
-            # ✅ Use .get() so it won’t crash if keys are missing
-            session['user_id'] = user.get('id', user.get('email'))
-            session['user_name'] = user.get('name', 'User')
-            session['user_email'] = user.get('email')
+            session['user_id'] = user['id']
+            session['user_name'] = user['name']
+            session['user_email'] = user['email']  # ✅ Add this line
             flash('Login successful!', 'success')
             return redirect(url_for('home'))
         else:
             error = "Invalid email or password"
-
     return render_template('login.html', error=error)
-
-
 
 
 @auth_bp.route('/signup', methods=['GET', 'POST'])
