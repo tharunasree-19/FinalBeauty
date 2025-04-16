@@ -97,23 +97,21 @@ def get_user_by_email(email):
 
 def create_user(name, email, phone, password):
     try:
-        response = get_users_table().put_item(Item={
-            'email': email,  # Partition Key
+        table = get_users_table()
+        print("Using table:", table.table_name)  # Confirm which table
+        response = table.put_item(Item={
+            'email': email,
             'name': name,
             'phone': phone,
             'password': generate_password_hash(password),
             'created_at': str(datetime.datetime.utcnow())
         })
-        
-        # Log the response to check what DynamoDB returns
-        print("PutItem response:", response)  # Added for debugging
-        
+        print("PutItem response:", response)
         return True
     except Exception as e:
-        print("Error creating user:", e)  # Added for debugging
-        logger.error(f"Error creating user: {e}")
+        print("Error creating user:", repr(e))  # Use repr for full trace
+        logger.error(f"Error creating user: {repr(e)}")
         return False
-
 
 
 
