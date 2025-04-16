@@ -12,7 +12,8 @@ load_dotenv()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(_name_)
+logger = logging.getLogger(__name__)
+
 
 app = Flask(_name_)
 app.secret_key = os.urandom(24)
