@@ -15,12 +15,12 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-app = Flask(_name_)
+app = Flask(__name__)
 app.secret_key = os.urandom(24)
 
 # Blueprints
-auth_bp = Blueprint('auth', _name_)
-booking_bp = Blueprint('booking', _name_)
+auth_bp = Blueprint('auth', __name__)
+booking_bp = Blueprint('booking', __name__)
 
 # AWS Services
 def get_dynamodb():
@@ -280,5 +280,5 @@ def home():
 app.register_blueprint(auth_bp)
 app.register_blueprint(booking_bp, url_prefix='/booking')
 
-if _name_ == '_main_':
+if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
