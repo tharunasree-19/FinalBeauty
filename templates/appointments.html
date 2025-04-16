@@ -91,8 +91,7 @@
 
         <!-- ✅ Moved action buttons here -->
         {% if appointment.status == 'scheduled' %}
-        <div class="appointment-actions">
-            <a href="{{ url_for('booking.cancel_appointment', appointment_id=appointment.id) }}" class="btn-cancel" 
+        <div class="appointment-actions"><a href="{{ url_for('booking.cancel_appointment', appointment_id=appointment.id) }}"class="btn-cancel" 
                onclick="return confirm('Are you sure you want to cancel this appointment?')">
                 <i class="fas fa-times"></i> Cancel Appointment
             </a>
