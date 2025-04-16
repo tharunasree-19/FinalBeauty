@@ -138,11 +138,8 @@ def login():
         else:
             error = "Invalid email or password"
 
-    return render_template('login.html', error=error)
-
-
-
-
+    returnreturn redirect(url_for('auth.login'))
+    
 
 @auth_bp.route('/signup', methods=['GET', 'POST'])
 def signup():
@@ -167,7 +164,7 @@ def signup():
                 return redirect(url_for('auth.login'))
             else:
                 error = "Failed to create account"
-    return render_template('signup.html', error=error)
+    return redirect(url_for('auth.signup'))
 
 @auth_bp.route('/logout')
 def logout():
