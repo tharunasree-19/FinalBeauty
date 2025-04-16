@@ -85,28 +85,18 @@ def get_stylists():
     except Exception as e:
         logger.error(f"Error fetching stylists: {e}")
         return []
-        
+
 def get_user_by_email(email):
-    # Ensure you use the correct table name, 'SalonUsers'
-    table = get_dynamodb().Table('SalonUsers')  # Changed to match your actual table name
-    response = table.query(
-        KeyConditionExpression=Key('email').eq(email)
-    )
-    
-    # Return the first matching user or None if no user is found
-    return response['Items'][0] if response['Items'] else None
-
-
+    try:
+        response = get_users_table().get_item(Key={'email': email})
+        return response.get('Item')
+    except Exception as e:
+        logger.error(f"Error fetching user by email: {e}")
+        return None
 
 
 def create_user(name, email, phone, password):
     try:
-        # Check if email already exists before attempting to insert
-        if get_user_by_email(email):
-            print("Email already exists:", email)
-            return False  # Email already exists, return False
-        
-        # Proceed to insert user data into the 'SalonUsers' table
         response = get_users_table().put_item(Item={
             'email': email,  # Partition Key
             'name': name,
@@ -115,20 +105,14 @@ def create_user(name, email, phone, password):
             'created_at': str(datetime.datetime.utcnow())
         })
         
-        # Log the response to see if DynamoDB operation was successful
-        print("PutItem response:", response)
-
-        # Check if the insert was successful (status code 200)
-        if response.get('ResponseMetadata', {}).get('HTTPStatusCode') == 200:
-            return True  # User creation successful
-        else:
-            print("Failed to create user, DynamoDB response:", response)
-            return False  # DynamoDB didn't respond with success
+        # Log the response to check what DynamoDB returns
+        print("PutItem response:", response)  # Added for debugging
+        
+        return True
     except Exception as e:
-        print("Error creating user:", e)  # Log any error during user creation
+        print("Error creating user:", e)  # Added for debugging
         logger.error(f"Error creating user: {e}")
-        return False  # Return False if there’s an exception
-
+        return False
 
 
 
@@ -145,13 +129,11 @@ def login():
         if user and check_password_hash(user['password'], password):
             session['user_id'] = user['id']
             session['user_name'] = user['name']
-            session['user_email'] = user['email']  # ✅ THIS LINE is important
             flash('Login successful!', 'success')
             return redirect(url_for('home'))
         else:
             error = "Invalid email or password"
     return render_template('login.html', error=error)
-
 
 @auth_bp.route('/signup', methods=['GET', 'POST'])
 def signup():
@@ -168,26 +150,15 @@ def signup():
         elif len(password) < 6:
             error = "Password must be at least 6 characters"
         else:
-            try:
-                # Check if the email already exists in DynamoDB
-                existing_user = get_user_by_email(email)
-                if existing_user:
-                    error = "Email already exists"
-                else:
-                    # Attempt to create the user
-                    user_creation = create_user(name, email, phone, password)
-                    
-                    if user_creation:
-                        flash('Account created! Please login.', 'success')
-                        return redirect(url_for('auth.login'))
-                    else:
-                        error = "Failed to create account in database"
-            except Exception as e:
-                print("SIGNUP ERROR:", str(e))  # Debugging message
-                error = f"Error occurred while creating account: {e}"
-
+            # Check if the email already exists in DynamoDB
+            if get_user_by_email(email):
+                error = "Email already exists"
+            elif create_user(name, email, phone, password):
+                flash('Account created! Please login.', 'success')
+                return redirect(url_for('auth.login'))
+            else:
+                error = "Failed to create account"
     return render_template('signup.html', error=error)
-
 
 @auth_bp.route('/logout')
 def logout():
@@ -195,8 +166,7 @@ def logout():
     flash("Logged out.", "info")
     return redirect(url_for('auth.login'))
 
-# Booking Routes (Blueprint)# Booking Route (Blueprint)
-@booking_bp.route('/', methods=['GET', 'POST'])
+# Booking Routes (Blueprint)@booking_bp.route('/', methods=['GET', 'POST'])
 def booking():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
@@ -221,62 +191,47 @@ def booking():
                 error = "Appointment date cannot be in the past"
             else:
                 # Check if the time slot is available for the stylist
-                response = get_appointments_table().scan(
-                    FilterExpression=Key('stylist_id').eq(stylist_id)
-                )
+                response = get_appointments_table().scan(FilterExpression=Key('stylist_id').eq(stylist_id))
                 for appt in response['Items']:
                     if appt['appointment_date'] == date_str and appt['appointment_time'] == time_str and appt['status'] == 'scheduled':
                         error = "This time slot is already booked"
                         break
                 else:
                     # Generate a unique appointment_id using current timestamp
-                    appt_id = 'apt' + datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S%f')[:-3]  # More readable and unique
-                    user_email = session.get('user_email')
+                    appt_id = str(datetime.datetime.utcnow().timestamp()).replace('.', '')  # Unique ID for appointment
+                    
+                    user_email = session.get('user_email')  # Assuming the user_email is stored in the session
 
-                    if not user_email:
-                        error = "User email not found in session. Please log in again."
-                    else:
-                        # Create the appointment item for DynamoDB
-                        appointment_item = {
-                            'appointment_id': appt_id,  # Partition Key
-                            'user_email': user_email,   # Sort Key
-                            'user_id': session['user_id'],
-                            'stylist_id': stylist_id,
-                            'service': service,
-                            'appointment_date': date_str,
-                            'appointment_time': time_str,
-                            'notes': notes,
-                            'status': 'scheduled',
-                            'created_at': str(datetime.datetime.utcnow())
-                        }
+                    # Create the appointment item for DynamoDB
+                    appointment_item = {
+                        'appointment_id': appt_id,  # Partition Key
+                        'user_email': user_email,   # Sort Key (email)
+                        'user_id': session['user_id'],  # User ID from session
+                        'stylist_id': stylist_id,   # Stylist ID from form
+                        'service': service,         # Service selected (e.g., "Haircut")
+                        'appointment_date': date_str,  # Date of appointment
+                        'appointment_time': time_str,  # Time of appointment
+                        'notes': notes,             # Notes from the user
+                        'status': 'scheduled',      # Default status when booked
+                        'created_at': str(datetime.datetime.utcnow())  # Timestamp of when the appointment was created
+                    }
 
-                        # Debug print
-                        print("DEBUG - Booking Item:", appointment_item)
+                    # Put item in DynamoDB
+                    get_appointments_table().put_item(Item=appointment_item)
 
-                        # Save to DynamoDB
-                        get_appointments_table().put_item(Item=appointment_item)
+                    # Send notifications (SNS and email)
+                    message = f"Appointment booked for {session['user_name']} with stylist ID {stylist_id} on {date_str} at {time_str}."
+                    send_sns_notification(message)
+                    send_email("client@example.com", "Salon Appointment Confirmed", message)
 
-                        # Send notifications
-                        message = f"Appointment booked for {session['user_name']} with stylist ID {stylist_id} on {date_str} at {time_str}."
-                        send_sns_notification(message)
-                        send_email("client@example.com", "Salon Appointment Confirmed", message)
-
-                        success = "Your appointment has been booked successfully!"
+                    success = "Your appointment has been booked successfully!"
 
         except ValueError as e:
             error = f"Invalid date or time format: {e}"
         except Exception as e:
-            print("ERROR:", str(e))  # Extra log for deeper error trace
             error = f"Error booking appointment: {e}"
 
-    return render_template(
-        'booking.html',
-        error=error,
-        success=success,
-        stylists=stylists,
-        min_date=datetime.date.today().strftime('%Y-%m-%d')
-    )
-
+    return render_template('booking.html', error=error, success=success, stylists=stylists, min_date=datetime.date.today().strftime('%Y-%m-%d'))
 
 
 @booking_bp.route('/appointments')
